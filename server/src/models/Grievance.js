@@ -35,7 +35,7 @@ const grievanceSchema = new mongoose.Schema(
       requestedAt: { type: Date, default: null },
       requestedFromStatus: {
         type: String,
-        enum: ["approved", "in_progress", "resolved", null],
+        enum: ["submitted", "approved", "in_progress", "resolved", null],
         default: null
       },
       adminRemarks: { type: String, default: "" },

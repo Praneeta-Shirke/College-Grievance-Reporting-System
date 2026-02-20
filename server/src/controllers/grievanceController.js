@@ -56,7 +56,8 @@ export const createGrievance = async (req, res) => {
 export const getGrievances = async (req, res) => {
   try {
     const query = {};
-    if (req.user.role === "student") query.createdBy = req.user._id;
+    const isStudentAllScope = req.user.role === "student" && req.query.scope === "all";
+    if (req.user.role === "student" && !isStudentAllScope) query.createdBy = req.user._id;
     if (req.user.role === "staff") query.department = req.user.department?._id;
 
     const grievances = await Grievance.find(query).populate(grievancePopulate).sort({ createdAt: -1 }).lean();
@@ -194,8 +195,10 @@ export const requestDismissal = async (req, res) => {
       return res.status(403).json({ message: "Only mapped staff can request dismissal" });
     }
 
-    if (!["approved", "in_progress", "resolved"].includes(grievance.status)) {
-      return res.status(400).json({ message: "Dismissal can be requested only for approved/in_progress/resolved grievances" });
+    if (!["submitted", "approved", "in_progress"].includes(grievance.status)) {
+      return res
+        .status(400)
+        .json({ message: "Dismissal can be requested only for submitted/approved/in_progress grievances" });
     }
 
     grievance.dismissalRequest = {
