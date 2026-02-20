@@ -17,9 +17,12 @@ const seed = async () => {
   ]);
 
   const departments = await Department.insertMany([
-    { name: "Computer Science", code: "CSE" },
-    { name: "Electronics", code: "ECE" },
-    { name: "Civil", code: "CIVIL" }
+    { name: "Computer Science", code: "CS" },
+    { name: "Electronics", code: "EC" },
+    { name: "Commerce", code: "Commerce" },
+    { name: "BioTech", code: "BioTech" },
+    { name: "Arts", code: "Arts" },
+    { name: "Chemistry", code: "Chem" }
   ]);
 
   const [cse, ece] = departments;
