@@ -25,8 +25,6 @@ const seed = async () => {
     { name: "Chemistry", code: "Chem" }
   ]);
 
-  const [cse, ece] = departments;
-
   const admin = await User.create({
     name: "College Admin",
     email: "admin@college.edu",
@@ -34,24 +32,30 @@ const seed = async () => {
     role: "admin"
   });
 
-  const cseStaff = await User.create({
-    name: "CSE Staff",
-    email: "staff.cse@college.edu",
-    passwordHash: await bcrypt.hash("Staff@123", 10),
-    role: "staff",
-    department: cse._id
-  });
+  const passwordHash = await bcrypt.hash("Staff@123", 10);
+  const staffConfigs = [
+    { code: "CS", name: "CS Staff", email: "staff.cs@college.edu" },
+    { code: "EC", name: "EC Staff", email: "staff.ec@college.edu" },
+    { code: "COMMERCE", name: "Commerce Staff", email: "staff.commerce@college.edu" },
+    { code: "BIOTECH", name: "BioTech Staff", email: "staff.biotech@college.edu" },
+    { code: "ARTS", name: "Arts Staff", email: "staff.arts@college.edu" },
+    { code: "CHEM", name: "Chemistry Staff", email: "staff.chem@college.edu" }
+  ];
 
-  const eceStaff = await User.create({
-    name: "ECE Staff",
-    email: "staff.ece@college.edu",
-    passwordHash: await bcrypt.hash("Staff@123", 10),
-    role: "staff",
-    department: ece._id
-  });
+  for (const cfg of staffConfigs) {
+    const department = departments.find((d) => d.code === cfg.code);
+    if (!department) continue;
 
-  await Department.findByIdAndUpdate(cse._id, { $set: { staffMembers: [cseStaff._id] } });
-  await Department.findByIdAndUpdate(ece._id, { $set: { staffMembers: [eceStaff._id] } });
+    const staff = await User.create({
+      name: cfg.name,
+      email: cfg.email,
+      passwordHash,
+      role: "staff",
+      department: department._id
+    });
+
+    await Department.findByIdAndUpdate(department._id, { $set: { staffMembers: [staff._id] } });
+  }
 
   await User.create({
     name: "Demo Student",

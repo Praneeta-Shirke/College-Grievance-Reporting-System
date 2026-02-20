@@ -7,7 +7,16 @@ const statusUpdateSchema = new mongoose.Schema(
     message: { type: String, required: true, trim: true },
     statusSnapshot: {
       type: String,
-      enum: ["submitted", "committee_review", "approved", "rejected", "in_progress", "resolved"],
+      enum: [
+        "submitted",
+        "committee_review",
+        "approved",
+        "rejected",
+        "in_progress",
+        "resolved",
+        "dismissal_requested",
+        "dismissed"
+      ],
       required: true
     },
     visibleToStudent: { type: Boolean, default: true }

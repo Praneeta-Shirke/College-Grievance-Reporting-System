@@ -117,6 +117,9 @@ export const adminApproval = async (req, res) => {
 
     const grievance = await Grievance.findById(req.params.id).populate(grievancePopulate);
     if (!grievance) return res.status(404).json({ message: "Grievance not found" });
+    if (grievance.status !== "committee_review") {
+      return res.status(400).json({ message: "Only committee_review grievances can be approved/rejected" });
+    }
 
     grievance.status = decision;
     grievance.adminApproval = {
@@ -154,8 +157,8 @@ export const addStatusUpdate = async (req, res) => {
     if (req.user.role !== "staff" || grievance.department._id.toString() !== staffDepartmentId) {
       return res.status(403).json({ message: "Only mapped staff can update status" });
     }
-    if (["rejected"].includes(grievance.status)) {
-      return res.status(400).json({ message: "Rejected grievance cannot be updated" });
+    if (["rejected", "dismissed", "dismissal_requested"].includes(grievance.status)) {
+      return res.status(400).json({ message: "Current grievance state cannot be updated by staff" });
     }
 
     if (nextStatus && ["in_progress", "resolved"].includes(nextStatus)) {
@@ -175,5 +178,87 @@ export const addStatusUpdate = async (req, res) => {
     return res.json({ grievance: refreshed, update });
   } catch (error) {
     return res.status(500).json({ message: "Failed to add status update", error: error.message });
+  }
+};
+
+export const requestDismissal = async (req, res) => {
+  try {
+    const { reason } = req.body;
+    if (!reason) return res.status(400).json({ message: "reason is required" });
+
+    const grievance = await Grievance.findById(req.params.id).populate(grievancePopulate);
+    if (!grievance) return res.status(404).json({ message: "Grievance not found" });
+
+    const staffDepartmentId = req.user.department?._id?.toString();
+    if (req.user.role !== "staff" || grievance.department._id.toString() !== staffDepartmentId) {
+      return res.status(403).json({ message: "Only mapped staff can request dismissal" });
+    }
+
+    if (!["approved", "in_progress", "resolved"].includes(grievance.status)) {
+      return res.status(400).json({ message: "Dismissal can be requested only for approved/in_progress/resolved grievances" });
+    }
+
+    grievance.dismissalRequest = {
+      decision: "pending",
+      reason,
+      requestedBy: req.user._id,
+      requestedAt: new Date(),
+      requestedFromStatus: grievance.status
+    };
+    grievance.status = "dismissal_requested";
+    await grievance.save();
+
+    const update = await StatusUpdate.create({
+      grievance: grievance._id,
+      updatedBy: req.user._id,
+      message: `Staff requested grievance dismissal: ${reason}`,
+      statusSnapshot: "dismissal_requested"
+    });
+
+    const refreshed = await Grievance.findById(grievance._id).populate(grievancePopulate);
+    emitGrievance(req, refreshed, update);
+    return res.json(refreshed);
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to request dismissal", error: error.message });
+  }
+};
+
+export const reviewDismissalRequest = async (req, res) => {
+  try {
+    const { decision, remarks = "" } = req.body;
+    if (!["approved", "rejected"].includes(decision)) {
+      return res.status(400).json({ message: "decision must be approved or rejected" });
+    }
+
+    const grievance = await Grievance.findById(req.params.id).populate(grievancePopulate);
+    if (!grievance) return res.status(404).json({ message: "Grievance not found" });
+
+    if (grievance.status !== "dismissal_requested" || grievance.dismissalRequest?.decision !== "pending") {
+      return res.status(400).json({ message: "No pending dismissal request found for this grievance" });
+    }
+
+    const previousStatus = grievance.dismissalRequest?.requestedFromStatus || "approved";
+    grievance.dismissalRequest.decision = decision;
+    grievance.dismissalRequest.adminRemarks = remarks;
+    grievance.dismissalRequest.reviewedBy = req.user._id;
+    grievance.dismissalRequest.reviewedAt = new Date();
+    grievance.status = decision === "approved" ? "dismissed" : previousStatus;
+    await grievance.save();
+
+    const update = await StatusUpdate.create({
+      grievance: grievance._id,
+      updatedBy: req.user._id,
+      message:
+        decision === "approved"
+          ? "Committee approved dismissal request. Grievance dismissed."
+          : "Committee rejected dismissal request. Grievance returned to previous state.",
+      statusSnapshot: grievance.status
+    });
+
+    const refreshed = await Grievance.findById(grievance._id).populate(grievancePopulate);
+    emitGrievance(req, refreshed, update);
+    return res.json(refreshed);
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to review dismissal request", error: error.message });
   }
 };
