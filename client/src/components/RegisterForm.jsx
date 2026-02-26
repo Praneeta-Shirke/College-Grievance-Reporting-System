@@ -25,6 +25,8 @@ const RegisterForm = () => {
   const [batch, setBatch] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
 
   const submit = async (e) => {
@@ -89,16 +91,28 @@ const RegisterForm = () => {
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         placeholder="Password"
-        type="password"
+        type={showPassword ? "text" : "password"}
         required
       />
+      <label>
+        <input type="checkbox" checked={showPassword} onChange={(e) => setShowPassword(e.target.checked)} /> Show
+        password
+      </label>
       <input
         value={confirmPassword}
         onChange={(e) => setConfirmPassword(e.target.value)}
         placeholder="Confirm password"
-        type="password"
+        type={showConfirmPassword ? "text" : "password"}
         required
       />
+      <label>
+        <input
+          type="checkbox"
+          checked={showConfirmPassword}
+          onChange={(e) => setShowConfirmPassword(e.target.checked)}
+        />{" "}
+        Show confirm password
+      </label>
       {error && <p className="error">{error}</p>}
       <button type="submit">Register</button>
     </form>

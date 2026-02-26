@@ -10,6 +10,8 @@ const AdminUserForm = ({ departments }) => {
   const [birthDate, setBirthDate] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [role, setRole] = useState("staff");
   const [departmentId, setDepartmentId] = useState("");
   const [message, setMessage] = useState("");
@@ -77,16 +79,28 @@ const AdminUserForm = ({ departments }) => {
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         placeholder="Temporary password"
-        type="password"
+        type={showPassword ? "text" : "password"}
         required
       />
+      <label>
+        <input type="checkbox" checked={showPassword} onChange={(e) => setShowPassword(e.target.checked)} /> Show
+        password
+      </label>
       <input
         value={confirmPassword}
         onChange={(e) => setConfirmPassword(e.target.value)}
         placeholder="Confirm password"
-        type="password"
+        type={showConfirmPassword ? "text" : "password"}
         required
       />
+      <label>
+        <input
+          type="checkbox"
+          checked={showConfirmPassword}
+          onChange={(e) => setShowConfirmPassword(e.target.checked)}
+        />{" "}
+        Show confirm password
+      </label>
       <select value={role} onChange={(e) => setRole(e.target.value)} required>
         <option value="staff">Staff</option>
         <option value="admin">Admin</option>

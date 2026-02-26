@@ -6,6 +6,7 @@ const LoginForm = () => {
   const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
 
   const submit = async (e) => {
@@ -28,9 +29,13 @@ const LoginForm = () => {
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         placeholder="Password"
-        type="password"
+        type={showPassword ? "text" : "password"}
         required
       />
+      <label>
+        <input type="checkbox" checked={showPassword} onChange={(e) => setShowPassword(e.target.checked)} /> Show
+        password
+      </label>
       {error && <p className="error">{error}</p>}
       <button type="submit">Login</button>
     </form>
