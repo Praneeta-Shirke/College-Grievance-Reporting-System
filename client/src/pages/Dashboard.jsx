@@ -132,7 +132,13 @@ const Dashboard = () => {
 
             <div className="grid">
               {grievances.map((g) => (
-                <GrievanceCard key={g._id} grievance={g} role={user.role} onChanged={load} />
+                <GrievanceCard
+                  key={g._id}
+                  grievance={g}
+                  role={user.role}
+                  currentUserId={user.id}
+                  onChanged={load}
+                />
               ))}
               {grievances.length === 0 && <p className="panel">No grievances found for your role.</p>}
             </div>
@@ -149,7 +155,13 @@ const Dashboard = () => {
             </div>
             <div className="grid">
               {studentMyGrievances.map((g) => (
-                <GrievanceCard key={g._id} grievance={g} role={user.role} onChanged={load} />
+                <GrievanceCard
+                  key={g._id}
+                  grievance={g}
+                  role={user.role}
+                  currentUserId={user.id}
+                  onChanged={load}
+                />
               ))}
               {studentMyGrievances.length === 0 && <p className="panel">No previous grievances found.</p>}
             </div>
@@ -166,7 +178,13 @@ const Dashboard = () => {
             </div>
             <div className="grid">
               {studentAllGrievances.map((g) => (
-                <GrievanceCard key={g._id} grievance={g} role={user.role} onChanged={load} />
+                <GrievanceCard
+                  key={g._id}
+                  grievance={g}
+                  role={user.role}
+                  currentUserId={user.id}
+                  onChanged={load}
+                />
               ))}
               {studentAllGrievances.length === 0 && <p className="panel">No grievances found.</p>}
             </div>

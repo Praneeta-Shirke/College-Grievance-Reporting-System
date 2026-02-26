@@ -265,3 +265,30 @@ export const reviewDismissalRequest = async (req, res) => {
     return res.status(500).json({ message: "Failed to review dismissal request", error: error.message });
   }
 };
+
+export const deleteGrievance = async (req, res) => {
+  try {
+    const grievance = await Grievance.findById(req.params.id).populate(grievancePopulate);
+    if (!grievance) return res.status(404).json({ message: "Grievance not found" });
+
+    const isAdmin = req.user.role === "admin";
+    const isOwnerStudent =
+      req.user.role === "student" && grievance.createdBy?._id?.toString() === req.user._id.toString();
+
+    if (!isAdmin && !isOwnerStudent) {
+      return res.status(403).json({ message: "You are not allowed to delete this grievance" });
+    }
+
+    await StatusUpdate.deleteMany({ grievance: grievance._id });
+    await Grievance.findByIdAndDelete(grievance._id);
+
+    const io = req.app.get("io");
+    io.to(`grievance:${grievance._id.toString()}`).emit("grievance:deleted", {
+      grievanceId: grievance._id.toString()
+    });
+
+    return res.json({ message: "Grievance deleted successfully" });
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to delete grievance", error: error.message });
+  }
+};

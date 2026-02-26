@@ -3,6 +3,7 @@ import {
   addStatusUpdate,
   adminApproval,
   createGrievance,
+  deleteGrievance,
   getGrievances,
   notifyAdmin,
   requestDismissal,
@@ -20,5 +21,6 @@ router.patch("/:id/admin-approval", authRequired, allowRoles("admin"), adminAppr
 router.post("/:id/updates", authRequired, allowRoles("staff"), addStatusUpdate);
 router.patch("/:id/request-dismissal", authRequired, allowRoles("staff"), requestDismissal);
 router.patch("/:id/dismissal-review", authRequired, allowRoles("admin"), reviewDismissalRequest);
+router.delete("/:id", authRequired, deleteGrievance);
 
 export default router;

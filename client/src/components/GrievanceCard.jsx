@@ -12,7 +12,7 @@ const pretty = {
   dismissed: "Dismissed"
 };
 
-const GrievanceCard = ({ grievance, role, onChanged }) => {
+const GrievanceCard = ({ grievance, role, currentUserId, onChanged }) => {
   const [remarks, setRemarks] = useState("");
   const [message, setMessage] = useState("");
   const [nextStatus, setNextStatus] = useState("");
@@ -81,6 +81,19 @@ const GrievanceCard = ({ grievance, role, onChanged }) => {
       setBusy(false);
     }
   };
+
+  const deleteCurrentGrievance = async () => {
+    setBusy(true);
+    try {
+      await api.delete(`/grievances/${grievance._id}`);
+      onChanged();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const canDelete =
+    role === "admin" || (role === "student" && grievance.createdBy?._id?.toString() === currentUserId?.toString());
 
   return (
     <article className="panel grievance-card">
@@ -181,6 +194,12 @@ const GrievanceCard = ({ grievance, role, onChanged }) => {
           Dismissal Request: {grievance.dismissalRequest.decision}
           {grievance.dismissalRequest.reason ? ` | Reason: ${grievance.dismissalRequest.reason}` : ""}
         </p>
+      )}
+
+      {canDelete && (
+        <button className="danger" onClick={deleteCurrentGrievance} disabled={busy}>
+          Delete Grievance
+        </button>
       )}
 
       <div className="timeline">
