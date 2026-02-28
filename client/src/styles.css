@@ -138,6 +138,21 @@ button.danger:hover {
   gap: 1rem;
 }
 
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.8rem;
+}
+
+.stat-card small {
+  color: var(--muted);
+  display: block;
+}
+
+.stat-card strong {
+  font-size: 1.3rem;
+}
+
 .grievance-card p {
   margin: 0.5rem 0;
 }

@@ -11,12 +11,13 @@ const Dashboard = () => {
   const { user } = useAuth();
   const [departments, setDepartments] = useState([]);
   const [grievances, setGrievances] = useState([]);
+  const [globalAllGrievances, setGlobalAllGrievances] = useState([]);
   const [staffDeptGrievances, setStaffDeptGrievances] = useState([]);
   const [staffAllGrievances, setStaffAllGrievances] = useState([]);
   const [staffTab, setStaffTab] = useState("department");
   const [studentMyGrievances, setStudentMyGrievances] = useState([]);
   const [studentAllGrievances, setStudentAllGrievances] = useState([]);
-  const [studentTab, setStudentTab] = useState("new");
+  const [studentTab, setStudentTab] = useState("all");
   const [adminTab, setAdminTab] = useState("grievances");
 
   const socket = useMemo(
@@ -36,6 +37,7 @@ const Dashboard = () => {
       setDepartments(depRes.data);
       setStudentMyGrievances(myRes.data);
       setStudentAllGrievances(allRes.data);
+      setGlobalAllGrievances(allRes.data);
       return;
     }
 
@@ -48,12 +50,14 @@ const Dashboard = () => {
       setDepartments(depRes.data);
       setStaffDeptGrievances(deptRes.data);
       setStaffAllGrievances(allRes.data);
+      setGlobalAllGrievances(allRes.data);
       return;
     }
 
     const [depRes, grievanceRes] = await Promise.all([depReq, api.get("/grievances")]);
     setDepartments(depRes.data);
     setGrievances(grievanceRes.data);
+    setGlobalAllGrievances(grievanceRes.data);
   };
 
   useEffect(() => {
@@ -71,21 +75,8 @@ const Dashboard = () => {
   }, [grievances, socket, studentMyGrievances, studentAllGrievances, staffDeptGrievances, staffAllGrievances, user.role]);
 
   useEffect(() => {
-    const onUpdate = ({ grievance, update }) => {
-      if (user.role === "student" || user.role === "staff") {
-        load();
-        return;
-      }
-
-      setGrievances((prev) => {
-        const idx = prev.findIndex((g) => g._id === grievance._id);
-        if (idx === -1) return prev;
-        const copy = [...prev];
-        const current = copy[idx];
-        const updates = update ? [...(current.updates || []), update] : current.updates || [];
-        copy[idx] = { ...current, ...grievance, updates };
-        return copy;
-      });
+    const onUpdate = () => {
+      load();
     };
 
     socket.on("grievance:updated", onUpdate);
@@ -95,11 +86,69 @@ const Dashboard = () => {
     };
   }, [socket, user.role]);
 
+  const dashboardStats = useMemo(() => {
+    const counts = {
+      total: globalAllGrievances.length,
+      submitted: 0,
+      committee_review: 0,
+      in_progress: 0,
+      resolved: 0,
+      rejected: 0,
+      dismissed: 0
+    };
+
+    globalAllGrievances.forEach((g) => {
+      if (counts[g.status] !== undefined) counts[g.status] += 1;
+    });
+
+    return counts;
+  }, [globalAllGrievances]);
+
   return (
     <div className="page">
       <Navbar />
 
       <main className="content">
+        <section className="list">
+          <div className="row-between">
+            <h2>All Grievances Dashboard</h2>
+            <button className="ghost" onClick={load}>
+              Refresh
+            </button>
+          </div>
+
+          <div className="stats-grid">
+            <div className="panel stat-card">
+              <small>Total</small>
+              <strong>{dashboardStats.total}</strong>
+            </div>
+            <div className="panel stat-card">
+              <small>Submitted</small>
+              <strong>{dashboardStats.submitted}</strong>
+            </div>
+            <div className="panel stat-card">
+              <small>Review</small>
+              <strong>{dashboardStats.committee_review}</strong>
+            </div>
+            <div className="panel stat-card">
+              <small>In Progress</small>
+              <strong>{dashboardStats.in_progress}</strong>
+            </div>
+            <div className="panel stat-card">
+              <small>Resolved</small>
+              <strong>{dashboardStats.resolved}</strong>
+            </div>
+            <div className="panel stat-card">
+              <small>Rejected</small>
+              <strong>{dashboardStats.rejected}</strong>
+            </div>
+            <div className="panel stat-card">
+              <small>Dismissed</small>
+              <strong>{dashboardStats.dismissed}</strong>
+            </div>
+          </div>
+        </section>
+
         {user.role === "student" && (
           <div className="tabs">
             <button className={studentTab === "new" ? "active" : "ghost"} onClick={() => setStudentTab("new")}>
