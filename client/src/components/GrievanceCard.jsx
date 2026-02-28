@@ -12,7 +12,7 @@ const pretty = {
   dismissed: "Dismissed"
 };
 
-const GrievanceCard = ({ grievance, role, currentUserId, onChanged }) => {
+const GrievanceCard = ({ grievance, role, currentUserId, currentUserDepartmentId, onChanged }) => {
   const [remarks, setRemarks] = useState("");
   const [message, setMessage] = useState("");
   const [nextStatus, setNextStatus] = useState("");
@@ -94,6 +94,8 @@ const GrievanceCard = ({ grievance, role, currentUserId, onChanged }) => {
 
   const canDelete =
     role === "admin" || (role === "student" && grievance.createdBy?._id?.toString() === currentUserId?.toString());
+  const canManageAsStaff =
+    role === "staff" && grievance.department?._id?.toString() === currentUserDepartmentId?.toString();
 
   return (
     <article className="panel grievance-card">
@@ -108,7 +110,7 @@ const GrievanceCard = ({ grievance, role, currentUserId, onChanged }) => {
       <p className="meta">Raised by: {grievance.createdBy?.name}</p>
       <p className="meta">Assigned staff: {grievance.assignedStaff?.name}</p>
 
-      {role === "staff" && grievance.status === "submitted" && (
+      {canManageAsStaff && grievance.status === "submitted" && (
         <button onClick={notifyAdmin} disabled={busy}>
           Forward to Committee
         </button>
@@ -154,7 +156,7 @@ const GrievanceCard = ({ grievance, role, currentUserId, onChanged }) => {
           </div>
         )}
 
-      {role === "staff" && ["approved", "in_progress"].includes(grievance.status) && (
+      {canManageAsStaff && ["approved", "in_progress"].includes(grievance.status) && (
         <form onSubmit={pushUpdate} className="stack">
           <textarea
             rows={2}
@@ -174,7 +176,7 @@ const GrievanceCard = ({ grievance, role, currentUserId, onChanged }) => {
         </form>
       )}
 
-      {role === "staff" && ["submitted", "approved", "in_progress"].includes(grievance.status) && (
+      {canManageAsStaff && ["submitted", "approved", "in_progress"].includes(grievance.status) && (
         <form onSubmit={requestDismissal} className="stack">
           <textarea
             rows={2}

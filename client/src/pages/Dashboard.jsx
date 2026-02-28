@@ -11,6 +11,9 @@ const Dashboard = () => {
   const { user } = useAuth();
   const [departments, setDepartments] = useState([]);
   const [grievances, setGrievances] = useState([]);
+  const [staffDeptGrievances, setStaffDeptGrievances] = useState([]);
+  const [staffAllGrievances, setStaffAllGrievances] = useState([]);
+  const [staffTab, setStaffTab] = useState("department");
   const [studentMyGrievances, setStudentMyGrievances] = useState([]);
   const [studentAllGrievances, setStudentAllGrievances] = useState([]);
   const [studentTab, setStudentTab] = useState("new");
@@ -36,6 +39,18 @@ const Dashboard = () => {
       return;
     }
 
+    if (user.role === "staff") {
+      const [depRes, deptRes, allRes] = await Promise.all([
+        depReq,
+        api.get("/grievances"),
+        api.get("/grievances?scope=all")
+      ]);
+      setDepartments(depRes.data);
+      setStaffDeptGrievances(deptRes.data);
+      setStaffAllGrievances(allRes.data);
+      return;
+    }
+
     const [depRes, grievanceRes] = await Promise.all([depReq, api.get("/grievances")]);
     setDepartments(depRes.data);
     setGrievances(grievanceRes.data);
@@ -49,13 +64,15 @@ const Dashboard = () => {
     const source =
       user.role === "student"
         ? [...studentMyGrievances, ...studentAllGrievances]
-        : grievances;
+        : user.role === "staff"
+          ? [...staffDeptGrievances, ...staffAllGrievances]
+          : grievances;
     source.forEach((g) => socket.emit("grievance:join", g._id));
-  }, [grievances, socket, studentMyGrievances, studentAllGrievances, user.role]);
+  }, [grievances, socket, studentMyGrievances, studentAllGrievances, staffDeptGrievances, staffAllGrievances, user.role]);
 
   useEffect(() => {
     const onUpdate = ({ grievance, update }) => {
-      if (user.role === "student") {
+      if (user.role === "student" || user.role === "staff") {
         load();
         return;
       }
@@ -100,6 +117,20 @@ const Dashboard = () => {
           </div>
         )}
 
+        {user.role === "staff" && (
+          <div className="tabs">
+            <button
+              className={staffTab === "department" ? "active" : "ghost"}
+              onClick={() => setStaffTab("department")}
+            >
+              Department Grievances
+            </button>
+            <button className={staffTab === "all" ? "active" : "ghost"} onClick={() => setStaffTab("all")}>
+              All Grievances
+            </button>
+          </div>
+        )}
+
         {user.role === "student" && studentTab === "new" && <GrievanceForm departments={departments} onCreated={load} />}
 
         {user.role === "admin" && (
@@ -121,7 +152,7 @@ const Dashboard = () => {
 
         {user.role === "admin" && adminTab === "users" && <AdminUserForm departments={departments} />}
 
-        {(user.role !== "admin" || adminTab === "grievances") && user.role !== "student" && (
+        {(user.role !== "admin" || adminTab === "grievances") && user.role !== "student" && user.role !== "staff" && (
           <section className="list">
             <div className="row-between">
               <h2>Grievances</h2>
@@ -137,10 +168,59 @@ const Dashboard = () => {
                   grievance={g}
                   role={user.role}
                   currentUserId={user.id}
+                  currentUserDepartmentId={user.department?._id}
                   onChanged={load}
                 />
               ))}
               {grievances.length === 0 && <p className="panel">No grievances found for your role.</p>}
+            </div>
+          </section>
+        )}
+
+        {user.role === "staff" && staffTab === "department" && (
+          <section className="list">
+            <div className="row-between">
+              <h2>Department Grievances</h2>
+              <button className="ghost" onClick={load}>
+                Refresh
+              </button>
+            </div>
+            <div className="grid">
+              {staffDeptGrievances.map((g) => (
+                <GrievanceCard
+                  key={g._id}
+                  grievance={g}
+                  role={user.role}
+                  currentUserId={user.id}
+                  currentUserDepartmentId={user.department?._id}
+                  onChanged={load}
+                />
+              ))}
+              {staffDeptGrievances.length === 0 && <p className="panel">No department grievances found.</p>}
+            </div>
+          </section>
+        )}
+
+        {user.role === "staff" && staffTab === "all" && (
+          <section className="list">
+            <div className="row-between">
+              <h2>All Grievances</h2>
+              <button className="ghost" onClick={load}>
+                Refresh
+              </button>
+            </div>
+            <div className="grid">
+              {staffAllGrievances.map((g) => (
+                <GrievanceCard
+                  key={g._id}
+                  grievance={g}
+                  role={user.role}
+                  currentUserId={user.id}
+                  currentUserDepartmentId={user.department?._id}
+                  onChanged={load}
+                />
+              ))}
+              {staffAllGrievances.length === 0 && <p className="panel">No grievances found.</p>}
             </div>
           </section>
         )}
@@ -160,6 +240,7 @@ const Dashboard = () => {
                   grievance={g}
                   role={user.role}
                   currentUserId={user.id}
+                  currentUserDepartmentId={user.department?._id}
                   onChanged={load}
                 />
               ))}
@@ -183,6 +264,7 @@ const Dashboard = () => {
                   grievance={g}
                   role={user.role}
                   currentUserId={user.id}
+                  currentUserDepartmentId={user.department?._id}
                   onChanged={load}
                 />
               ))}

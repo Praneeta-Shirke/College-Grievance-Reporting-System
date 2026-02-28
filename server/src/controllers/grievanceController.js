@@ -57,8 +57,9 @@ export const getGrievances = async (req, res) => {
   try {
     const query = {};
     const isStudentAllScope = req.user.role === "student" && req.query.scope === "all";
+    const isStaffAllScope = req.user.role === "staff" && req.query.scope === "all";
     if (req.user.role === "student" && !isStudentAllScope) query.createdBy = req.user._id;
-    if (req.user.role === "staff") query.department = req.user.department?._id;
+    if (req.user.role === "staff" && !isStaffAllScope) query.department = req.user.department?._id;
 
     const grievances = await Grievance.find(query).populate(grievancePopulate).sort({ createdAt: -1 }).lean();
     const grievanceIds = grievances.map((g) => g._id);
