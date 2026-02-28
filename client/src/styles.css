@@ -166,6 +166,33 @@ button.danger:hover {
   margin: 0.5rem 0;
 }
 
+.grievance-card.priority-P1 {
+  border-left: 6px solid #c81e1e;
+}
+
+.grievance-card.priority-P2 {
+  border-left: 6px solid #f59e0b;
+}
+
+.grievance-card.priority-P3 {
+  border-left: 6px solid #0f9d58;
+}
+
+.priority-text-P1 {
+  color: #c81e1e;
+  font-weight: 600;
+}
+
+.priority-text-P2 {
+  color: #b7791f;
+  font-weight: 600;
+}
+
+.priority-text-P3 {
+  color: #0f9d58;
+  font-weight: 600;
+}
+
 .preview {
   width: 100%;
   border-radius: 12px;

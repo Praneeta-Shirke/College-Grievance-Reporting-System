@@ -12,11 +12,19 @@ const pretty = {
   dismissed: "Dismissed"
 };
 
+const priorityLabel = {
+  P1: "Priority 1 (High)",
+  P2: "Priority 2 (Medium)",
+  P3: "Priority 3 (Low)"
+};
+
 const GrievanceCard = ({ grievance, role, currentUserId, currentUserDepartmentId, onChanged }) => {
   const [remarks, setRemarks] = useState("");
   const [message, setMessage] = useState("");
   const [nextStatus, setNextStatus] = useState("");
   const [dismissReason, setDismissReason] = useState("");
+  const [validatedPriority, setValidatedPriority] = useState(grievance.urgencyValidation?.validatedPriority || "P3");
+  const [urgencyRemarks, setUrgencyRemarks] = useState("");
   const [busy, setBusy] = useState(false);
 
   const imageSrc = useMemo(() => {
@@ -92,21 +100,41 @@ const GrievanceCard = ({ grievance, role, currentUserId, currentUserDepartmentId
     }
   };
 
+  const validateUrgency = async (e) => {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      await api.patch(`/grievances/${grievance._id}/validate-urgency`, {
+        validatedPriority,
+        remarks: urgencyRemarks
+      });
+      setUrgencyRemarks("");
+      onChanged();
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const canDelete =
     role === "admin" || (role === "student" && grievance.createdBy?._id?.toString() === currentUserId?.toString());
   const canManageAsStaff =
     role === "staff" && grievance.department?._id?.toString() === currentUserDepartmentId?.toString();
   const isAnonymousGrievance = grievance.isAnonymous !== false;
   const raisedByLabel = isAnonymousGrievance ? "Anonymous Student" : grievance.createdBy?.name;
+  const effectivePriority = grievance.urgencyValidation?.validatedPriority || grievance.priorityRequested || "P3";
 
   return (
-    <article className="panel grievance-card">
+    <article className={`panel grievance-card priority-${effectivePriority}`}>
       <div className="row-between">
         <h4>{grievance.department?.name || "Department"}</h4>
         <span className={`badge ${grievance.status}`}>{pretty[grievance.status] || grievance.status}</span>
       </div>
 
       <p>{grievance.description}</p>
+      <p className={`meta priority-text-${effectivePriority}`}>
+        Requested: {priorityLabel[grievance.priorityRequested] || "Priority 3 (Low)"} | Validated:{" "}
+        {priorityLabel[grievance.urgencyValidation?.validatedPriority] || "Pending"}
+      </p>
       <p className="meta">Location: {grievance.location || "Not provided"}</p>
       {imageSrc && <img className="preview" src={imageSrc} alt="Grievance" />}
 
@@ -136,6 +164,25 @@ const GrievanceCard = ({ grievance, role, currentUserId, currentUserDepartmentId
             </button>
           </div>
         </div>
+      )}
+
+      {role === "admin" && (
+        <form className="stack" onSubmit={validateUrgency}>
+          <select value={validatedPriority} onChange={(e) => setValidatedPriority(e.target.value)} required>
+            <option value="P1">Priority 1: Immediate/Critical (High Severity)</option>
+            <option value="P2">Priority 2: Serious/Urgent (Medium Severity)</option>
+            <option value="P3">Priority 3: General/Administrative (Low Severity)</option>
+          </select>
+          <textarea
+            rows={2}
+            value={urgencyRemarks}
+            onChange={(e) => setUrgencyRemarks(e.target.value)}
+            placeholder="Urgency validation remarks (optional)"
+          />
+          <button type="submit" className="ghost" disabled={busy}>
+            Validate Urgency
+          </button>
+        </form>
       )}
 
       {role === "admin" &&

@@ -2,6 +2,12 @@ import mongoose from "mongoose";
 
 const grievanceSchema = new mongoose.Schema(
   {
+    priorityRequested: {
+      type: String,
+      enum: ["P1", "P2", "P3"],
+      default: "P3",
+      index: true
+    },
     description: { type: String, required: true, trim: true },
     location: { type: String, required: true, trim: true },
     imageUrl: { type: String, required: true },
@@ -29,6 +35,13 @@ const grievanceSchema = new mongoose.Schema(
       remarks: { type: String, default: "" },
       approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
       approvedAt: { type: Date, default: null }
+    },
+    urgencyValidation: {
+      status: { type: String, enum: ["pending", "validated"], default: "pending" },
+      validatedPriority: { type: String, enum: ["P1", "P2", "P3", null], default: null },
+      remarks: { type: String, default: "" },
+      validatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+      validatedAt: { type: Date, default: null }
     },
     dismissalRequest: {
       decision: { type: String, enum: ["pending", "approved", "rejected", null], default: null },

@@ -53,9 +53,12 @@ const emitGrievance = (req, grievance, update = null) => {
 
 export const createGrievance = async (req, res) => {
   try {
-    const { description, location, departmentId, isAnonymous } = req.body;
+    const { description, location, departmentId, isAnonymous, priority } = req.body;
     if (!description || !location || !departmentId) {
       return res.status(400).json({ message: "description, location and departmentId are required" });
+    }
+    if (!["P1", "P2", "P3"].includes(priority)) {
+      return res.status(400).json({ message: "priority is required and must be one of: P1, P2, P3" });
     }
     if (!req.file) return res.status(400).json({ message: "Image is required" });
 
@@ -70,6 +73,7 @@ export const createGrievance = async (req, res) => {
     const grievance = await Grievance.create({
       description,
       location,
+      priorityRequested: priority,
       department: department._id,
       createdBy: req.user._id,
       assignedStaff: assignedStaff._id,
@@ -90,6 +94,40 @@ export const createGrievance = async (req, res) => {
     return res.status(201).json(maskAnonymousGrievance(payload));
   } catch (error) {
     return res.status(500).json({ message: "Failed to create grievance", error: error.message });
+  }
+};
+
+export const validateUrgency = async (req, res) => {
+  try {
+    const { validatedPriority, remarks = "" } = req.body;
+    if (!["P1", "P2", "P3"].includes(validatedPriority)) {
+      return res.status(400).json({ message: "validatedPriority must be one of: P1, P2, P3" });
+    }
+
+    const grievance = await Grievance.findById(req.params.id).populate(grievancePopulate);
+    if (!grievance) return res.status(404).json({ message: "Grievance not found" });
+
+    grievance.urgencyValidation = {
+      status: "validated",
+      validatedPriority,
+      remarks,
+      validatedBy: req.user._id,
+      validatedAt: new Date()
+    };
+    await grievance.save();
+
+    const update = await StatusUpdate.create({
+      grievance: grievance._id,
+      updatedBy: req.user._id,
+      message: `Committee validated urgency as ${validatedPriority}${remarks ? ` (${remarks})` : ""}`,
+      statusSnapshot: grievance.status
+    });
+
+    const refreshed = await Grievance.findById(grievance._id).populate(grievancePopulate);
+    emitGrievance(req, refreshed, update);
+    return res.json(maskAnonymousGrievance(refreshed));
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to validate urgency", error: error.message });
   }
 };
 

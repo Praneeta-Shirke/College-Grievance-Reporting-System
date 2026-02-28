@@ -2,6 +2,7 @@ import { useState } from "react";
 import api from "../api";
 
 const GrievanceForm = ({ departments, onCreated }) => {
+  const [priority, setPriority] = useState("P3");
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState("");
   const [departmentId, setDepartmentId] = useState("");
@@ -23,6 +24,7 @@ const GrievanceForm = ({ departments, onCreated }) => {
       const formData = new FormData();
       formData.append("description", description);
       formData.append("location", location);
+      formData.append("priority", priority);
       formData.append("departmentId", departmentId);
       formData.append("image", image);
       formData.append("isAnonymous", String(isAnonymous));
@@ -33,6 +35,7 @@ const GrievanceForm = ({ departments, onCreated }) => {
 
       setDescription("");
       setLocation("");
+      setPriority("P3");
       setDepartmentId("");
       setImage(null);
       setIsAnonymous(false);
@@ -60,6 +63,11 @@ const GrievanceForm = ({ departments, onCreated }) => {
         placeholder="Location where issue occurred (e.g., CS6 class)"
         required
       />
+      <select value={priority} onChange={(e) => setPriority(e.target.value)} required>
+        <option value="P1">Priority 1: Immediate/Critical (High Severity)</option>
+        <option value="P2">Priority 2: Serious/Urgent (Medium Severity)</option>
+        <option value="P3">Priority 3: General/Administrative (Low Severity)</option>
+      </select>
       <select value={departmentId} onChange={(e) => setDepartmentId(e.target.value)} required>
         <option value="">Select Department</option>
         {departments.map((dep) => (

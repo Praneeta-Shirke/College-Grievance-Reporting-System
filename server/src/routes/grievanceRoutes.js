@@ -7,7 +7,8 @@ import {
   getGrievances,
   notifyAdmin,
   requestDismissal,
-  reviewDismissalRequest
+  reviewDismissalRequest,
+  validateUrgency
 } from "../controllers/grievanceController.js";
 import { allowRoles, authRequired } from "../middleware/auth.js";
 import { upload } from "../middleware/upload.js";
@@ -18,6 +19,7 @@ router.get("/", authRequired, getGrievances);
 router.post("/", authRequired, allowRoles("student"), upload.single("image"), createGrievance);
 router.patch("/:id/notify-admin", authRequired, allowRoles("staff"), notifyAdmin);
 router.patch("/:id/admin-approval", authRequired, allowRoles("admin"), adminApproval);
+router.patch("/:id/validate-urgency", authRequired, allowRoles("admin"), validateUrgency);
 router.post("/:id/updates", authRequired, allowRoles("staff"), addStatusUpdate);
 router.patch("/:id/request-dismissal", authRequired, allowRoles("staff"), requestDismissal);
 router.patch("/:id/dismissal-review", authRequired, allowRoles("admin"), reviewDismissalRequest);
