@@ -5,6 +5,7 @@ const GrievanceForm = ({ departments, onCreated }) => {
   const [description, setDescription] = useState("");
   const [departmentId, setDepartmentId] = useState("");
   const [image, setImage] = useState(null);
+  const [isAnonymous, setIsAnonymous] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -22,6 +23,7 @@ const GrievanceForm = ({ departments, onCreated }) => {
       formData.append("description", description);
       formData.append("departmentId", departmentId);
       formData.append("image", image);
+      formData.append("isAnonymous", String(isAnonymous));
 
       const { data } = await api.post("/grievances", formData, {
         headers: { "Content-Type": "multipart/form-data" }
@@ -30,6 +32,7 @@ const GrievanceForm = ({ departments, onCreated }) => {
       setDescription("");
       setDepartmentId("");
       setImage(null);
+      setIsAnonymous(false);
       onCreated(data);
     } catch (err) {
       setError(err.response?.data?.message || "Could not submit grievance");
@@ -57,6 +60,10 @@ const GrievanceForm = ({ departments, onCreated }) => {
         ))}
       </select>
       <input type="file" accept="image/*" onChange={(e) => setImage(e.target.files?.[0] || null)} required />
+      <label>
+        <input type="checkbox" checked={isAnonymous} onChange={(e) => setIsAnonymous(e.target.checked)} /> Submit
+        anonymously
+      </label>
       {error && <p className="error">{error}</p>}
       <button type="submit" disabled={loading}>
         {loading ? "Submitting..." : "Submit"}

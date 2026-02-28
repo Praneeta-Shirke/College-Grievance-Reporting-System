@@ -96,6 +96,8 @@ const GrievanceCard = ({ grievance, role, currentUserId, currentUserDepartmentId
     role === "admin" || (role === "student" && grievance.createdBy?._id?.toString() === currentUserId?.toString());
   const canManageAsStaff =
     role === "staff" && grievance.department?._id?.toString() === currentUserDepartmentId?.toString();
+  const isAnonymousGrievance = grievance.isAnonymous !== false;
+  const raisedByLabel = isAnonymousGrievance ? "Anonymous Student" : grievance.createdBy?.name;
 
   return (
     <article className="panel grievance-card">
@@ -107,7 +109,7 @@ const GrievanceCard = ({ grievance, role, currentUserId, currentUserDepartmentId
       <p>{grievance.description}</p>
       {imageSrc && <img className="preview" src={imageSrc} alt="Grievance" />}
 
-      <p className="meta">Raised by: {grievance.createdBy?.name}</p>
+      <p className="meta">Raised by: {raisedByLabel}</p>
       <p className="meta">Assigned staff: {grievance.assignedStaff?.name}</p>
 
       {canManageAsStaff && grievance.status === "submitted" && (
@@ -210,7 +212,11 @@ const GrievanceCard = ({ grievance, role, currentUserId, currentUserDepartmentId
           <div key={u._id} className="timeline-item">
             <p>{u.message}</p>
             <small>
-              {u.updatedBy?.name || "System"} | {pretty[u.statusSnapshot] || u.statusSnapshot}
+              {isAnonymousGrievance &&
+              grievance.createdBy?._id?.toString() === u.updatedBy?._id?.toString()
+                ? "Anonymous Student"
+                : u.updatedBy?.name || "System"}{" "}
+              | {pretty[u.statusSnapshot] || u.statusSnapshot}
             </small>
           </div>
         ))}

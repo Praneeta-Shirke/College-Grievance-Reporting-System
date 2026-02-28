@@ -4,6 +4,7 @@ const grievanceSchema = new mongoose.Schema(
   {
     description: { type: String, required: true, trim: true },
     imageUrl: { type: String, required: true },
+    isAnonymous: { type: Boolean, default: false },
     department: { type: mongoose.Schema.Types.ObjectId, ref: "Department", required: true, index: true },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
     assignedStaff: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },

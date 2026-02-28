@@ -8,14 +8,52 @@ const grievancePopulate = [
   { path: "assignedStaff", select: "name email" }
 ];
 
+const parseAnonymousFlag = (value) => {
+  if (value === true || value === 1) return true;
+  if (typeof value === "string") {
+    const v = value.trim().toLowerCase();
+    return v === "true" || v === "1" || v === "on" || v === "yes";
+  }
+  return false;
+};
+
+const maskAnonymousGrievance = (grievance) => {
+  if (!grievance) return grievance;
+  const payload = typeof grievance.toObject === "function" ? grievance.toObject() : { ...grievance };
+  // Privacy-first fallback: legacy records may not have this field persisted.
+  if (payload.isAnonymous === false) return payload;
+
+  const creatorId = payload.createdBy?._id?.toString?.() || payload.createdBy?.toString?.();
+  if (payload.createdBy && typeof payload.createdBy === "object") {
+    payload.createdBy.name = "Anonymous Student";
+    if (payload.createdBy.email) payload.createdBy.email = "hidden@anonymous.local";
+  }
+
+  if (Array.isArray(payload.updates)) {
+    payload.updates = payload.updates.map((u) => {
+      const next = { ...u };
+      const updaterId = next.updatedBy?._id?.toString?.() || next.updatedBy?.toString?.();
+      if (creatorId && updaterId && creatorId === updaterId && next.updatedBy && typeof next.updatedBy === "object") {
+        next.updatedBy = { ...next.updatedBy, name: "Anonymous Student" };
+      }
+      return next;
+    });
+  }
+
+  return payload;
+};
+
 const emitGrievance = (req, grievance, update = null) => {
   const io = req.app.get("io");
-  io.to(`grievance:${grievance._id.toString()}`).emit("grievance:updated", { grievance, update });
+  io.to(`grievance:${grievance._id.toString()}`).emit("grievance:updated", {
+    grievance: maskAnonymousGrievance(grievance),
+    update
+  });
 };
 
 export const createGrievance = async (req, res) => {
   try {
-    const { description, departmentId } = req.body;
+    const { description, departmentId, isAnonymous } = req.body;
     if (!description || !departmentId) {
       return res.status(400).json({ message: "description and departmentId are required" });
     }
@@ -35,6 +73,7 @@ export const createGrievance = async (req, res) => {
       createdBy: req.user._id,
       assignedStaff: assignedStaff._id,
       imageUrl: `/uploads/${req.file.filename}`,
+      isAnonymous: parseAnonymousFlag(isAnonymous),
       status: "submitted"
     });
 
@@ -47,7 +86,7 @@ export const createGrievance = async (req, res) => {
 
     const payload = await Grievance.findById(grievance._id).populate(grievancePopulate);
     emitGrievance(req, payload);
-    return res.status(201).json(payload);
+    return res.status(201).json(maskAnonymousGrievance(payload));
   } catch (error) {
     return res.status(500).json({ message: "Failed to create grievance", error: error.message });
   }
@@ -75,7 +114,9 @@ export const getGrievances = async (req, res) => {
       return acc;
     }, {});
 
-    const payload = grievances.map((g) => ({ ...g, updates: updatesByGrievance[g._id.toString()] || [] }));
+    const payload = grievances
+      .map((g) => ({ ...g, updates: updatesByGrievance[g._id.toString()] || [] }))
+      .map(maskAnonymousGrievance);
     return res.json(payload);
   } catch (error) {
     return res.status(500).json({ message: "Failed to fetch grievances", error: error.message });
@@ -104,7 +145,7 @@ export const notifyAdmin = async (req, res) => {
 
     const refreshed = await Grievance.findById(grievance._id).populate(grievancePopulate);
     emitGrievance(req, refreshed, update);
-    return res.json(refreshed);
+    return res.json(maskAnonymousGrievance(refreshed));
   } catch (error) {
     return res.status(500).json({ message: "Failed to notify admin", error: error.message });
   }
@@ -141,7 +182,7 @@ export const adminApproval = async (req, res) => {
 
     const refreshed = await Grievance.findById(grievance._id).populate(grievancePopulate);
     emitGrievance(req, refreshed, update);
-    return res.json(refreshed);
+    return res.json(maskAnonymousGrievance(refreshed));
   } catch (error) {
     return res.status(500).json({ message: "Failed to process approval", error: error.message });
   }
@@ -177,7 +218,7 @@ export const addStatusUpdate = async (req, res) => {
 
     const refreshed = await Grievance.findById(grievance._id).populate(grievancePopulate);
     emitGrievance(req, refreshed, update);
-    return res.json({ grievance: refreshed, update });
+    return res.json({ grievance: maskAnonymousGrievance(refreshed), update });
   } catch (error) {
     return res.status(500).json({ message: "Failed to add status update", error: error.message });
   }
@@ -221,7 +262,7 @@ export const requestDismissal = async (req, res) => {
 
     const refreshed = await Grievance.findById(grievance._id).populate(grievancePopulate);
     emitGrievance(req, refreshed, update);
-    return res.json(refreshed);
+    return res.json(maskAnonymousGrievance(refreshed));
   } catch (error) {
     return res.status(500).json({ message: "Failed to request dismissal", error: error.message });
   }
@@ -261,7 +302,7 @@ export const reviewDismissalRequest = async (req, res) => {
 
     const refreshed = await Grievance.findById(grievance._id).populate(grievancePopulate);
     emitGrievance(req, refreshed, update);
-    return res.json(refreshed);
+    return res.json(maskAnonymousGrievance(refreshed));
   } catch (error) {
     return res.status(500).json({ message: "Failed to review dismissal request", error: error.message });
   }

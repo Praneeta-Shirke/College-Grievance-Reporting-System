@@ -184,6 +184,9 @@ const Dashboard = () => {
 
         {user.role === "student" && (
           <div className="tabs">
+            <button className={studentTab === "all" ? "active" : "ghost"} onClick={() => setStudentTab("all")}>
+              All Grievances
+            </button>
             <button className={studentTab === "new" ? "active" : "ghost"} onClick={() => setStudentTab("new")}>
               New Grievance
             </button>
@@ -193,22 +196,19 @@ const Dashboard = () => {
             >
               Previous Grievances
             </button>
-            <button className={studentTab === "all" ? "active" : "ghost"} onClick={() => setStudentTab("all")}>
-              All Grievances
-            </button>
           </div>
         )}
 
         {user.role === "staff" && (
           <div className="tabs">
+            <button className={staffTab === "all" ? "active" : "ghost"} onClick={() => setStaffTab("all")}>
+              All Grievances
+            </button>
             <button
               className={staffTab === "department" ? "active" : "ghost"}
               onClick={() => setStaffTab("department")}
             >
               Department Grievances
-            </button>
-            <button className={staffTab === "all" ? "active" : "ghost"} onClick={() => setStaffTab("all")}>
-              All Grievances
             </button>
           </div>
         )}
