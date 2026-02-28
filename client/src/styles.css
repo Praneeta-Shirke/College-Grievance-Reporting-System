@@ -153,6 +153,15 @@ button.danger:hover {
   font-size: 1.3rem;
 }
 
+.stat-card {
+  cursor: pointer;
+}
+
+.stat-card.active-stat {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(15, 111, 191, 0.2);
+}
+
 .grievance-card p {
   margin: 0.5rem 0;
 }

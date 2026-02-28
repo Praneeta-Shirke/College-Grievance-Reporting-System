@@ -19,6 +19,7 @@ const Dashboard = () => {
   const [studentAllGrievances, setStudentAllGrievances] = useState([]);
   const [studentTab, setStudentTab] = useState("all");
   const [adminTab, setAdminTab] = useState("grievances");
+  const [statusFilter, setStatusFilter] = useState("");
 
   const socket = useMemo(
     () => io(import.meta.env.VITE_SOCKET_URL || "http://localhost:5000", { autoConnect: true }),
@@ -104,6 +105,11 @@ const Dashboard = () => {
     return counts;
   }, [globalAllGrievances]);
 
+  const applyStatusFilter = (items) => {
+    if (!statusFilter) return items;
+    return items.filter((g) => g.status === statusFilter);
+  };
+
   return (
     <div className="page">
       <Navbar />
@@ -118,35 +124,62 @@ const Dashboard = () => {
           </div>
 
           <div className="stats-grid">
-            <div className="panel stat-card">
+            <div className={`panel stat-card ${statusFilter === "" ? "active-stat" : ""}`} onClick={() => setStatusFilter("")}>
               <small>Total</small>
               <strong>{dashboardStats.total}</strong>
             </div>
-            <div className="panel stat-card">
+            <div
+              className={`panel stat-card ${statusFilter === "submitted" ? "active-stat" : ""}`}
+              onClick={() => setStatusFilter("submitted")}
+            >
               <small>Submitted</small>
               <strong>{dashboardStats.submitted}</strong>
             </div>
-            <div className="panel stat-card">
+            <div
+              className={`panel stat-card ${statusFilter === "committee_review" ? "active-stat" : ""}`}
+              onClick={() => setStatusFilter("committee_review")}
+            >
               <small>Review</small>
               <strong>{dashboardStats.committee_review}</strong>
             </div>
-            <div className="panel stat-card">
+            <div
+              className={`panel stat-card ${statusFilter === "in_progress" ? "active-stat" : ""}`}
+              onClick={() => setStatusFilter("in_progress")}
+            >
               <small>In Progress</small>
               <strong>{dashboardStats.in_progress}</strong>
             </div>
-            <div className="panel stat-card">
+            <div
+              className={`panel stat-card ${statusFilter === "resolved" ? "active-stat" : ""}`}
+              onClick={() => setStatusFilter("resolved")}
+            >
               <small>Resolved</small>
               <strong>{dashboardStats.resolved}</strong>
             </div>
-            <div className="panel stat-card">
+            <div
+              className={`panel stat-card ${statusFilter === "rejected" ? "active-stat" : ""}`}
+              onClick={() => setStatusFilter("rejected")}
+            >
               <small>Rejected</small>
               <strong>{dashboardStats.rejected}</strong>
             </div>
-            <div className="panel stat-card">
+            <div
+              className={`panel stat-card ${statusFilter === "dismissed" ? "active-stat" : ""}`}
+              onClick={() => setStatusFilter("dismissed")}
+            >
               <small>Dismissed</small>
               <strong>{dashboardStats.dismissed}</strong>
             </div>
           </div>
+
+          {statusFilter && (
+            <p className="meta">
+              Active filter: <strong>{statusFilter}</strong>{" "}
+              <button className="ghost" onClick={() => setStatusFilter("")}>
+                Clear
+              </button>
+            </p>
+          )}
         </section>
 
         {user.role === "student" && (
@@ -211,7 +244,7 @@ const Dashboard = () => {
             </div>
 
             <div className="grid">
-              {grievances.map((g) => (
+              {applyStatusFilter(grievances).map((g) => (
                 <GrievanceCard
                   key={g._id}
                   grievance={g}
@@ -221,7 +254,7 @@ const Dashboard = () => {
                   onChanged={load}
                 />
               ))}
-              {grievances.length === 0 && <p className="panel">No grievances found for your role.</p>}
+              {applyStatusFilter(grievances).length === 0 && <p className="panel">No grievances found for this filter.</p>}
             </div>
           </section>
         )}
@@ -235,7 +268,7 @@ const Dashboard = () => {
               </button>
             </div>
             <div className="grid">
-              {staffDeptGrievances.map((g) => (
+              {applyStatusFilter(staffDeptGrievances).map((g) => (
                 <GrievanceCard
                   key={g._id}
                   grievance={g}
@@ -245,7 +278,7 @@ const Dashboard = () => {
                   onChanged={load}
                 />
               ))}
-              {staffDeptGrievances.length === 0 && <p className="panel">No department grievances found.</p>}
+              {applyStatusFilter(staffDeptGrievances).length === 0 && <p className="panel">No grievances found for this filter.</p>}
             </div>
           </section>
         )}
@@ -259,7 +292,7 @@ const Dashboard = () => {
               </button>
             </div>
             <div className="grid">
-              {staffAllGrievances.map((g) => (
+              {applyStatusFilter(staffAllGrievances).map((g) => (
                 <GrievanceCard
                   key={g._id}
                   grievance={g}
@@ -269,7 +302,7 @@ const Dashboard = () => {
                   onChanged={load}
                 />
               ))}
-              {staffAllGrievances.length === 0 && <p className="panel">No grievances found.</p>}
+              {applyStatusFilter(staffAllGrievances).length === 0 && <p className="panel">No grievances found for this filter.</p>}
             </div>
           </section>
         )}
@@ -283,7 +316,7 @@ const Dashboard = () => {
               </button>
             </div>
             <div className="grid">
-              {studentMyGrievances.map((g) => (
+              {applyStatusFilter(studentMyGrievances).map((g) => (
                 <GrievanceCard
                   key={g._id}
                   grievance={g}
@@ -293,7 +326,7 @@ const Dashboard = () => {
                   onChanged={load}
                 />
               ))}
-              {studentMyGrievances.length === 0 && <p className="panel">No previous grievances found.</p>}
+              {applyStatusFilter(studentMyGrievances).length === 0 && <p className="panel">No grievances found for this filter.</p>}
             </div>
           </section>
         )}
@@ -307,7 +340,7 @@ const Dashboard = () => {
               </button>
             </div>
             <div className="grid">
-              {studentAllGrievances.map((g) => (
+              {applyStatusFilter(studentAllGrievances).map((g) => (
                 <GrievanceCard
                   key={g._id}
                   grievance={g}
@@ -317,7 +350,7 @@ const Dashboard = () => {
                   onChanged={load}
                 />
               ))}
-              {studentAllGrievances.length === 0 && <p className="panel">No grievances found.</p>}
+              {applyStatusFilter(studentAllGrievances).length === 0 && <p className="panel">No grievances found for this filter.</p>}
             </div>
           </section>
         )}
