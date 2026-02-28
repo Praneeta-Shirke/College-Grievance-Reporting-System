@@ -53,9 +53,9 @@ const emitGrievance = (req, grievance, update = null) => {
 
 export const createGrievance = async (req, res) => {
   try {
-    const { description, departmentId, isAnonymous } = req.body;
-    if (!description || !departmentId) {
-      return res.status(400).json({ message: "description and departmentId are required" });
+    const { description, location, departmentId, isAnonymous } = req.body;
+    if (!description || !location || !departmentId) {
+      return res.status(400).json({ message: "description, location and departmentId are required" });
     }
     if (!req.file) return res.status(400).json({ message: "Image is required" });
 
@@ -69,6 +69,7 @@ export const createGrievance = async (req, res) => {
 
     const grievance = await Grievance.create({
       description,
+      location,
       department: department._id,
       createdBy: req.user._id,
       assignedStaff: assignedStaff._id,

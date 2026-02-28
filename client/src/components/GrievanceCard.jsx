@@ -107,6 +107,7 @@ const GrievanceCard = ({ grievance, role, currentUserId, currentUserDepartmentId
       </div>
 
       <p>{grievance.description}</p>
+      <p className="meta">Location: {grievance.location || "Not provided"}</p>
       {imageSrc && <img className="preview" src={imageSrc} alt="Grievance" />}
 
       <p className="meta">Raised by: {raisedByLabel}</p>

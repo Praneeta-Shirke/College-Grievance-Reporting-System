@@ -3,6 +3,7 @@ import api from "../api";
 
 const GrievanceForm = ({ departments, onCreated }) => {
   const [description, setDescription] = useState("");
+  const [location, setLocation] = useState("");
   const [departmentId, setDepartmentId] = useState("");
   const [image, setImage] = useState(null);
   const [isAnonymous, setIsAnonymous] = useState(false);
@@ -21,6 +22,7 @@ const GrievanceForm = ({ departments, onCreated }) => {
       setLoading(true);
       const formData = new FormData();
       formData.append("description", description);
+      formData.append("location", location);
       formData.append("departmentId", departmentId);
       formData.append("image", image);
       formData.append("isAnonymous", String(isAnonymous));
@@ -30,6 +32,7 @@ const GrievanceForm = ({ departments, onCreated }) => {
       });
 
       setDescription("");
+      setLocation("");
       setDepartmentId("");
       setImage(null);
       setIsAnonymous(false);
@@ -49,6 +52,12 @@ const GrievanceForm = ({ departments, onCreated }) => {
         onChange={(e) => setDescription(e.target.value)}
         placeholder="Describe the issue"
         rows={4}
+        required
+      />
+      <input
+        value={location}
+        onChange={(e) => setLocation(e.target.value)}
+        placeholder="Location where issue occurred (e.g., CS6 class)"
         required
       />
       <select value={departmentId} onChange={(e) => setDepartmentId(e.target.value)} required>

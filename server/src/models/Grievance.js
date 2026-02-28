@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 const grievanceSchema = new mongoose.Schema(
   {
     description: { type: String, required: true, trim: true },
+    location: { type: String, required: true, trim: true },
     imageUrl: { type: String, required: true },
     isAnonymous: { type: Boolean, default: false },
     department: { type: mongoose.Schema.Types.ObjectId, ref: "Department", required: true, index: true },
