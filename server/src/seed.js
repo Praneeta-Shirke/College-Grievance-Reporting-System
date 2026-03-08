@@ -6,6 +6,7 @@ import User from "./models/User.js";
 import CollegeIdentity from "./models/CollegeIdentity.js";
 import Grievance from "./models/Grievance.js";
 import StatusUpdate from "./models/StatusUpdate.js";
+import PendingRegistration from "./models/PendingRegistration.js";
 
 const seed = async () => {
   await connectDB();
@@ -15,7 +16,8 @@ const seed = async () => {
     User.deleteMany({}),
     CollegeIdentity.deleteMany({}),
     Grievance.deleteMany({}),
-    StatusUpdate.deleteMany({})
+    StatusUpdate.deleteMany({}),
+    PendingRegistration.deleteMany({})
   ]);
 
   const departments = await Department.insertMany([

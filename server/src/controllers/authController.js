@@ -1,8 +1,11 @@
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import Department from "../models/Department.js";
 import CollegeIdentity from "../models/CollegeIdentity.js";
+import PendingRegistration from "../models/PendingRegistration.js";
+import { sendRegistrationOtpEmail } from "../utils/mailer.js";
 
 const createToken = (id) => jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "7d" });
 const normalizeCollegeId = (collegeId) => (collegeId || "").trim().toUpperCase();
@@ -16,6 +19,96 @@ const collegeIdPatternByRole = {
 
 const validateCollegeIdFormat = (role, collegeId) => collegeIdPatternByRole[role]?.test(collegeId);
 const validIdentityRoles = ["student", "staff", "admin"];
+const otpValidityMs = 10 * 60 * 1000;
+
+const toUserPayload = (user) => ({
+  id: user._id,
+  name: user.name,
+  email: user.email,
+  collegeId: user.collegeId,
+  phone: user.phone,
+  currentAddress: user.currentAddress,
+  birthDate: user.birthDate,
+  className: user.className,
+  batch: user.batch,
+  role: user.role,
+  department: user.department
+});
+
+const hashOtp = (otp) => crypto.createHash("sha256").update(String(otp)).digest("hex");
+const generateOtp = () => String(crypto.randomInt(100000, 1000000));
+
+const validateStudentRegistrationPayload = async (payload) => {
+  const { name, email, password, confirmPassword, collegeId, phone, currentAddress, birthDate, className, batch } =
+    payload;
+
+  if (!name) return { ok: false, status: 400, message: "Name is required" };
+  if (!email) return { ok: false, status: 400, message: "Email is required" };
+  if (!collegeId) return { ok: false, status: 400, message: "College ID is required" };
+  if (!phone) return { ok: false, status: 400, message: "Phone number is required" };
+  if (!currentAddress) return { ok: false, status: 400, message: "Current address is required" };
+  if (!birthDate) return { ok: false, status: 400, message: "Birth date is required" };
+  if (!className) return { ok: false, status: 400, message: "Class is required" };
+  if (!batch) return { ok: false, status: 400, message: "Batch is required" };
+  if (!password) return { ok: false, status: 400, message: "Password is required" };
+  if (!confirmPassword) return { ok: false, status: 400, message: "Confirm password is required" };
+
+  if (!/^\d{10}$/.test(phone)) {
+    return { ok: false, status: 400, message: "Phone number must be 10 digits" };
+  }
+  if (!allowedStudentClasses.includes(className)) {
+    return { ok: false, status: 400, message: "Invalid class selection" };
+  }
+  if (!/^\d{4}$/.test(batch)) {
+    return { ok: false, status: 400, message: "Batch must be a single year in YYYY format (e.g., 2026)" };
+  }
+  if (password.length < 8) {
+    return { ok: false, status: 400, message: "Password must be at least 8 characters long" };
+  }
+  if (password !== confirmPassword) {
+    return { ok: false, status: 400, message: "Password and confirmPassword do not match" };
+  }
+
+  const birthDateValue = new Date(birthDate);
+  if (Number.isNaN(birthDateValue.getTime())) {
+    return { ok: false, status: 400, message: "Invalid birthDate" };
+  }
+
+  const normalizedEmail = email.toLowerCase();
+  const normalizedCollegeId = normalizeCollegeId(collegeId);
+
+  if (!validateCollegeIdFormat("student", normalizedCollegeId)) {
+    return { ok: false, status: 400, message: "Invalid student collegeId format. Use STU-YYYY-NNNN" };
+  }
+
+  const [emailExists, collegeIdExists, identityExists] = await Promise.all([
+    User.findOne({ email: normalizedEmail }),
+    User.findOne({ collegeId: normalizedCollegeId }),
+    CollegeIdentity.findOne({ collegeId: normalizedCollegeId, role: "student", isActive: true, isClaimed: false })
+  ]);
+
+  if (emailExists) return { ok: false, status: 409, message: "Email already in use" };
+  if (collegeIdExists) return { ok: false, status: 409, message: "College ID already in use" };
+  if (!identityExists) {
+    return { ok: false, status: 400, message: "College ID is not authorized for student registration" };
+  }
+
+  const passwordHash = await bcrypt.hash(password, 10);
+  return {
+    ok: true,
+    data: {
+      name,
+      email: normalizedEmail,
+      collegeId: normalizedCollegeId,
+      phone,
+      currentAddress,
+      birthDate: birthDateValue,
+      className,
+      batch,
+      passwordHash
+    }
+  };
+};
 
 const claimIdentity = async (collegeId, role, userId) => {
   return CollegeIdentity.findOneAndUpdate(
@@ -27,90 +120,25 @@ const claimIdentity = async (collegeId, role, userId) => {
 
 export const register = async (req, res) => {
   try {
-    const { name, email, password, confirmPassword, collegeId, phone, currentAddress, birthDate, className, batch } =
-      req.body;
-    if (!name) return res.status(400).json({ message: "Name is required" });
-    if (!email) return res.status(400).json({ message: "Email is required" });
-    if (!collegeId) return res.status(400).json({ message: "College ID is required" });
-    if (!phone) return res.status(400).json({ message: "Phone number is required" });
-    if (!currentAddress) return res.status(400).json({ message: "Current address is required" });
-    if (!birthDate) return res.status(400).json({ message: "Birth date is required" });
-    if (!className) return res.status(400).json({ message: "Class is required" });
-    if (!batch) return res.status(400).json({ message: "Batch is required" });
-    if (!password) return res.status(400).json({ message: "Password is required" });
-    if (!confirmPassword) return res.status(400).json({ message: "Confirm password is required" });
+    const validation = await validateStudentRegistrationPayload(req.body);
+    if (!validation.ok) return res.status(validation.status).json({ message: validation.message });
 
-    if (!/^\d{10}$/.test(phone)) {
-      return res.status(400).json({ message: "Phone number must be 10 digits" });
-    }
-    if (!allowedStudentClasses.includes(className)) {
-      return res.status(400).json({ message: "Invalid class selection" });
-    }
-    if (!/^\d{4}$/.test(batch)) {
-      return res.status(400).json({ message: "Batch must be a single year in YYYY format (e.g., 2026)" });
-    }
-    if (password.length < 8) {
-      return res.status(400).json({ message: "Password must be at least 8 characters long" });
-    }
+    const otp = generateOtp();
+    await PendingRegistration.findOneAndUpdate(
+      { email: validation.data.email },
+      {
+        $set: {
+          email: validation.data.email,
+          otpHash: hashOtp(otp),
+          otpExpiresAt: new Date(Date.now() + otpValidityMs),
+          registrationData: validation.data
+        }
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
 
-    if (password !== confirmPassword) {
-      return res.status(400).json({ message: "Password and confirmPassword do not match" });
-    }
-
-    const birthDateValue = new Date(birthDate);
-    if (Number.isNaN(birthDateValue.getTime())) {
-      return res.status(400).json({ message: "Invalid birthDate" });
-    }
-
-    const normalizedEmail = email.toLowerCase();
-    const normalizedCollegeId = normalizeCollegeId(collegeId);
-    if (!validateCollegeIdFormat("student", normalizedCollegeId)) {
-      return res.status(400).json({ message: "Invalid student collegeId format. Use STU-YYYY-NNNN" });
-    }
-
-    const [emailExists, collegeIdExists] = await Promise.all([
-      User.findOne({ email: normalizedEmail }),
-      User.findOne({ collegeId: normalizedCollegeId })
-    ]);
-    if (emailExists) return res.status(409).json({ message: "Email already in use" });
-    if (collegeIdExists) return res.status(409).json({ message: "College ID already in use" });
-
-    const passwordHash = await bcrypt.hash(password, 10);
-    const user = await User.create({
-      name,
-      email: normalizedEmail,
-      collegeId: normalizedCollegeId,
-      phone,
-      currentAddress,
-      birthDate: birthDateValue,
-      className,
-      batch,
-      passwordHash,
-      role: "student"
-    });
-
-    const claimed = await claimIdentity(normalizedCollegeId, "student", user._id);
-    if (!claimed) {
-      await User.findByIdAndDelete(user._id);
-      return res.status(400).json({ message: "College ID is not authorized for student registration" });
-    }
-
-    return res.status(201).json({
-      token: createToken(user._id),
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        collegeId: user.collegeId,
-        phone: user.phone,
-        currentAddress: user.currentAddress,
-        birthDate: user.birthDate,
-        className: user.className,
-        batch: user.batch,
-        role: user.role,
-        department: user.department
-      }
-    });
+    await sendRegistrationOtpEmail(validation.data.email, otp);
+    return res.status(200).json({ message: "Registration OTP sent to your email", email: validation.data.email });
   } catch (error) {
     if (error?.code === 11000) {
       const key = Object.keys(error.keyPattern || {})[0] || "field";
@@ -121,7 +149,72 @@ export const register = async (req, res) => {
       const first = Object.values(error.errors || {})[0];
       return res.status(400).json({ message: first?.message || "Validation failed" });
     }
+    if (
+      error?.message?.includes("OTP email is not configured") ||
+      error?.message?.includes("Invalid login") ||
+      error?.message?.includes("Username and Password not accepted") ||
+      error?.code === "EAUTH"
+    ) {
+      return res.status(500).json({ message: error.message });
+    }
     return res.status(500).json({ message: "Registration failed", error: error.message });
+  }
+};
+
+export const verifyRegistrationOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email) return res.status(400).json({ message: "Email is required" });
+    if (!otp) return res.status(400).json({ message: "OTP is required" });
+
+    const pending = await PendingRegistration.findOne({ email: (email || "").toLowerCase() });
+    if (!pending) return res.status(400).json({ message: "No pending registration found. Register again." });
+
+    if (pending.otpExpiresAt.getTime() < Date.now()) {
+      await PendingRegistration.findByIdAndDelete(pending._id);
+      return res.status(400).json({ message: "OTP has expired. Register again." });
+    }
+
+    if (pending.otpHash !== hashOtp(otp)) {
+      return res.status(400).json({ message: "Invalid OTP" });
+    }
+
+    const data = pending.registrationData;
+
+    const [emailExists, collegeIdExists] = await Promise.all([
+      User.findOne({ email: data.email }),
+      User.findOne({ collegeId: data.collegeId })
+    ]);
+    if (emailExists) return res.status(409).json({ message: "Email already in use" });
+    if (collegeIdExists) return res.status(409).json({ message: "College ID already in use" });
+
+    const user = await User.create({
+      name: data.name,
+      email: data.email,
+      collegeId: data.collegeId,
+      phone: data.phone,
+      currentAddress: data.currentAddress,
+      birthDate: data.birthDate,
+      className: data.className,
+      batch: data.batch,
+      passwordHash: data.passwordHash,
+      role: "student"
+    });
+
+    const claimed = await claimIdentity(data.collegeId, "student", user._id);
+    if (!claimed) {
+      await User.findByIdAndDelete(user._id);
+      return res.status(400).json({ message: "College ID is not authorized for student registration" });
+    }
+
+    await PendingRegistration.findByIdAndDelete(pending._id);
+
+    return res.status(201).json({
+      token: createToken(user._id),
+      user: toUserPayload(user)
+    });
+  } catch (error) {
+    return res.status(500).json({ message: "OTP verification failed", error: error.message });
   }
 };
 
@@ -137,19 +230,7 @@ export const login = async (req, res) => {
 
     return res.json({
       token: createToken(user._id),
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        collegeId: user.collegeId,
-        phone: user.phone,
-        currentAddress: user.currentAddress,
-        birthDate: user.birthDate,
-        className: user.className,
-        batch: user.batch,
-        role: user.role,
-        department: user.department
-      }
+      user: toUserPayload(user)
     });
   } catch (error) {
     return res.status(500).json({ message: "Login failed", error: error.message });
@@ -157,19 +238,7 @@ export const login = async (req, res) => {
 };
 
 export const me = async (req, res) => {
-  return res.json({
-    id: req.user._id,
-    name: req.user.name,
-    email: req.user.email,
-    collegeId: req.user.collegeId,
-    phone: req.user.phone,
-    currentAddress: req.user.currentAddress,
-    birthDate: req.user.birthDate,
-    className: req.user.className,
-    batch: req.user.batch,
-    role: req.user.role,
-    department: req.user.department
-  });
+  return res.json(toUserPayload(req.user));
 };
 
 export const createUserByAdmin = async (req, res) => {
@@ -250,15 +319,7 @@ export const createUserByAdmin = async (req, res) => {
 
     const withDepartment = await User.findById(created._id).populate("department", "name code");
     return res.status(201).json({
-      id: withDepartment._id,
-      name: withDepartment.name,
-      email: withDepartment.email,
-      collegeId: withDepartment.collegeId,
-      phone: withDepartment.phone,
-      currentAddress: withDepartment.currentAddress,
-      birthDate: withDepartment.birthDate,
-      role: withDepartment.role,
-      department: withDepartment.department
+      ...toUserPayload(withDepartment)
     });
   } catch (error) {
     if (error?.code === 11000) {
