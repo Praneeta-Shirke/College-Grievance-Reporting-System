@@ -404,3 +404,104 @@ export const bulkAddCollegeIds = async (req, res) => {
     return res.status(500).json({ message: "Failed to import college IDs", error: error.message });
   }
 };
+
+export const bulkAddStudentCollegeIdsByStaff = async (req, res) => {
+  try {
+    const text = `${req.body?.rawText || ""}`.trim();
+    if (!text) {
+      return res.status(400).json({
+        message: "No entries found. Send rawText with STUDENT_COLLEGE_ID[,NOTES] per line."
+      });
+    }
+
+    const rows = text
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const [collegeIdPart = "", ...noteParts] = line.split(",").map((x) => x.trim());
+        return {
+          collegeId: normalizeCollegeId(collegeIdPart),
+          role: "student",
+          notes: noteParts.join(", ").trim()
+        };
+      });
+
+    const results = [];
+    let createdCount = 0;
+    let skippedCount = 0;
+    let errorCount = 0;
+
+    for (let index = 0; index < rows.length; index += 1) {
+      const row = rows[index];
+      const itemNo = index + 1;
+
+      if (!row.collegeId) {
+        results.push({
+          row: itemNo,
+          collegeId: "",
+          role: "student",
+          status: "error",
+          message: "College ID is required"
+        });
+        errorCount += 1;
+        continue;
+      }
+
+      if (!validateCollegeIdFormat("student", row.collegeId)) {
+        results.push({
+          row: itemNo,
+          collegeId: row.collegeId,
+          role: "student",
+          status: "error",
+          message: "Invalid format for student. Use STU-YYYY-NNNN"
+        });
+        errorCount += 1;
+        continue;
+      }
+
+      const existing = await CollegeIdentity.findOne({ collegeId: row.collegeId });
+      if (existing) {
+        results.push({
+          row: itemNo,
+          collegeId: row.collegeId,
+          role: "student",
+          status: "skipped",
+          message: "College ID already exists in identity pool"
+        });
+        skippedCount += 1;
+        continue;
+      }
+
+      await CollegeIdentity.create({
+        collegeId: row.collegeId,
+        role: "student",
+        notes: row.notes || "",
+        isActive: true,
+        isClaimed: false
+      });
+
+      results.push({
+        row: itemNo,
+        collegeId: row.collegeId,
+        role: "student",
+        status: "created",
+        message: "Student college ID added"
+      });
+      createdCount += 1;
+    }
+
+    return res.status(201).json({
+      message: "Bulk student college ID import processed",
+      summary: {
+        total: rows.length,
+        created: createdCount,
+        skipped: skippedCount,
+        errors: errorCount
+      },
+      results
+    });
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to import student college IDs", error: error.message });
+  }
+};

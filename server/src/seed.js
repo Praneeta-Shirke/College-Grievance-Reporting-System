@@ -24,7 +24,9 @@ const seed = async () => {
     { name: "Commerce", code: "Commerce" },
     { name: "BioTech", code: "BioTech" },
     { name: "Arts", code: "Arts" },
-    { name: "Chemistry", code: "Chem" }
+    { name: "Chemistry", code: "Chem" },
+    { name: "Hostel", code: "Hostel" },
+    { name: "General (No Department)", code: "General" }
   ]);
 
   const identityPool = [
@@ -43,6 +45,10 @@ const seed = async () => {
     { collegeId: "STF-ARTS-002", role: "staff", notes: "Available Arts staff" },
     { collegeId: "STF-CHEM-001", role: "staff", notes: "Seeded Chemistry staff" },
     { collegeId: "STF-CHEM-002", role: "staff", notes: "Available Chemistry staff" },
+    { collegeId: "STF-HOSTEL-001", role: "staff", notes: "Seeded Hostel staff" },
+    { collegeId: "STF-HOSTEL-002", role: "staff", notes: "Available Hostel staff" },
+    { collegeId: "STF-GENERAL-001", role: "staff", notes: "Seeded General staff" },
+    { collegeId: "STF-GENERAL-002", role: "staff", notes: "Available General staff" },
     { collegeId: "STU-2026-0001", role: "student", notes: "Seeded student" },
     { collegeId: "STU-2026-0002", role: "student", notes: "Available student" },
     { collegeId: "STU-2026-0003", role: "student", notes: "Available student" }
@@ -81,7 +87,21 @@ const seed = async () => {
       phone: "9000000104"
     },
     { code: "ARTS", name: "Arts Staff", email: "staff.arts@college.edu", collegeId: "STF-ARTS-001", phone: "9000000105" },
-    { code: "CHEM", name: "Chemistry Staff", email: "staff.chem@college.edu", collegeId: "STF-CHEM-001", phone: "9000000106" }
+    { code: "CHEM", name: "Chemistry Staff", email: "staff.chem@college.edu", collegeId: "STF-CHEM-001", phone: "9000000106" },
+    {
+      code: "HOSTEL",
+      name: "Hostel Staff",
+      email: "staff.hostel@college.edu",
+      collegeId: "STF-HOSTEL-001",
+      phone: "9000000107"
+    },
+    {
+      code: "GENERAL",
+      name: "General Staff",
+      email: "staff.general@college.edu",
+      collegeId: "STF-GENERAL-001",
+      phone: "9000000108"
+    }
   ];
 
   for (const cfg of staffConfigs) {
@@ -123,7 +143,9 @@ const seed = async () => {
   console.log("Seed complete");
   console.log("Admin:", admin.email, "Admin@123");
   console.log("Student college IDs available for registration: STU-2026-0002, STU-2026-0003");
-  console.log("Staff college IDs available for admin creation: STF-CS-002, STF-EC-002, STF-COMMERCE-002...");
+  console.log(
+    "Staff college IDs available for admin creation: STF-CS-002, STF-EC-002, STF-COMMERCE-002, STF-HOSTEL-002, STF-GENERAL-002..."
+  );
   console.log("Admin college IDs available for admin creation: ADM-1002, ADM-1003");
   process.exit(0);
 };

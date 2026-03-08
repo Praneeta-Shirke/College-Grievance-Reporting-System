@@ -211,6 +211,9 @@ const Dashboard = () => {
             >
               Department Grievances
             </button>
+            <button className={staffTab === "studentIds" ? "active" : "ghost"} onClick={() => setStaffTab("studentIds")}>
+              Student College IDs
+            </button>
           </div>
         )}
 
@@ -310,6 +313,20 @@ const Dashboard = () => {
               ))}
               {applyStatusFilter(staffAllGrievances).length === 0 && <p className="panel">No grievances found for this filter.</p>}
             </div>
+          </section>
+        )}
+
+        {user.role === "staff" && staffTab === "studentIds" && (
+          <section className="admin-tools">
+            <AdminCollegeIdBulkForm
+              endpoint="/auth/staff/student-college-ids/bulk"
+              title="Bulk Add Student College IDs"
+              helpLine="One row per line: STUDENT_COLLEGE_ID,NOTES(optional)"
+              exampleLine="Example: STU-2027-0001,First year student ID"
+              placeholder={"STU-2027-0001,First year student ID\nSTU-2027-0002\nSTU-2027-0003,Reserve ID"}
+              submitLabel="Import Student IDs"
+              failMessage="Failed to import student college IDs"
+            />
           </section>
         )}
 
