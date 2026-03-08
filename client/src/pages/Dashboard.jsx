@@ -6,6 +6,7 @@ import GrievanceCard from "../components/GrievanceCard";
 import GrievanceForm from "../components/GrievanceForm";
 import Navbar from "../components/Navbar";
 import AdminUserForm from "../components/AdminUserForm";
+import AdminCollegeIdBulkForm from "../components/AdminCollegeIdBulkForm";
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -232,7 +233,12 @@ const Dashboard = () => {
           </div>
         )}
 
-        {user.role === "admin" && adminTab === "users" && <AdminUserForm departments={departments} />}
+        {user.role === "admin" && adminTab === "users" && (
+          <section className="admin-tools">
+            <AdminUserForm departments={departments} />
+            <AdminCollegeIdBulkForm />
+          </section>
+        )}
 
         {(user.role !== "admin" || adminTab === "grievances") && user.role !== "student" && user.role !== "staff" && (
           <section className="list">

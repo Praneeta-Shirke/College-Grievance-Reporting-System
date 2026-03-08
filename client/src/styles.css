@@ -103,6 +103,12 @@ button.danger:hover {
   margin: 1rem 0;
 }
 
+.admin-tools {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
 .tabs .active {
   background: var(--accent);
   color: white;
@@ -250,6 +256,28 @@ button.danger:hover {
 .timeline-item {
   padding: 0.45rem 0;
   border-bottom: 1px dashed var(--line);
+}
+
+.bulk-results {
+  max-height: 220px;
+  overflow: auto;
+}
+
+.bulk-row {
+  margin: 0.35rem 0;
+  font-size: 0.9rem;
+}
+
+.bulk-created {
+  color: var(--ok);
+}
+
+.bulk-skipped {
+  color: var(--warn);
+}
+
+.bulk-error {
+  color: var(--bad);
 }
 
 @media (max-width: 700px) {
