@@ -121,6 +121,40 @@ button.danger:hover {
   margin-bottom: 1rem;
 }
 
+.profile-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.profile-menu-wrap {
+  position: relative;
+}
+
+.profile-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.4rem);
+  min-width: 160px;
+  padding: 0.5rem;
+  display: grid;
+  gap: 0.35rem;
+  z-index: 20;
+}
+
+.profile-menu button {
+  width: 100%;
+  text-align: left;
+}
+
+.profile-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
 .content {
   display: grid;
   gap: 1rem;

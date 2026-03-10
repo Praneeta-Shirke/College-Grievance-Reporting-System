@@ -7,6 +7,7 @@ import GrievanceForm from "../components/GrievanceForm";
 import Navbar from "../components/Navbar";
 import AdminUserForm from "../components/AdminUserForm";
 import AdminCollegeIdBulkForm from "../components/AdminCollegeIdBulkForm";
+import ProfilePanel from "../components/ProfilePanel";
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -20,6 +21,7 @@ const Dashboard = () => {
   const [studentAllGrievances, setStudentAllGrievances] = useState([]);
   const [studentTab, setStudentTab] = useState("all");
   const [adminTab, setAdminTab] = useState("grievances");
+  const [showProfile, setShowProfile] = useState(false);
   const [statusFilter, setStatusFilter] = useState("");
 
   const socket = useMemo(
@@ -113,77 +115,81 @@ const Dashboard = () => {
 
   return (
     <div className="page">
-      <Navbar />
+      <Navbar onOpenProfile={() => setShowProfile(true)} />
 
       <main className="content">
-        <section className="list">
-          <div className="row-between">
-            <h2>All Grievances Dashboard</h2>
-            <button className="ghost" onClick={load}>
-              Refresh
-            </button>
-          </div>
-
-          <div className="stats-grid">
-            <div className={`panel stat-card ${statusFilter === "" ? "active-stat" : ""}`} onClick={() => setStatusFilter("")}>
-              <small>Total</small>
-              <strong>{dashboardStats.total}</strong>
-            </div>
-            <div
-              className={`panel stat-card ${statusFilter === "submitted" ? "active-stat" : ""}`}
-              onClick={() => setStatusFilter("submitted")}
-            >
-              <small>Submitted</small>
-              <strong>{dashboardStats.submitted}</strong>
-            </div>
-            <div
-              className={`panel stat-card ${statusFilter === "committee_review" ? "active-stat" : ""}`}
-              onClick={() => setStatusFilter("committee_review")}
-            >
-              <small>Review</small>
-              <strong>{dashboardStats.committee_review}</strong>
-            </div>
-            <div
-              className={`panel stat-card ${statusFilter === "in_progress" ? "active-stat" : ""}`}
-              onClick={() => setStatusFilter("in_progress")}
-            >
-              <small>In Progress</small>
-              <strong>{dashboardStats.in_progress}</strong>
-            </div>
-            <div
-              className={`panel stat-card ${statusFilter === "resolved" ? "active-stat" : ""}`}
-              onClick={() => setStatusFilter("resolved")}
-            >
-              <small>Resolved</small>
-              <strong>{dashboardStats.resolved}</strong>
-            </div>
-            <div
-              className={`panel stat-card ${statusFilter === "rejected" ? "active-stat" : ""}`}
-              onClick={() => setStatusFilter("rejected")}
-            >
-              <small>Rejected</small>
-              <strong>{dashboardStats.rejected}</strong>
-            </div>
-            <div
-              className={`panel stat-card ${statusFilter === "dismissed" ? "active-stat" : ""}`}
-              onClick={() => setStatusFilter("dismissed")}
-            >
-              <small>Dismissed</small>
-              <strong>{dashboardStats.dismissed}</strong>
-            </div>
-          </div>
-
-          {statusFilter && (
-            <p className="meta">
-              Active filter: <strong>{statusFilter}</strong>{" "}
-              <button className="ghost" onClick={() => setStatusFilter("")}>
-                Clear
+        {!showProfile && (
+          <section className="list">
+            <div className="row-between">
+              <h2>All Grievances Dashboard</h2>
+              <button className="ghost" onClick={load}>
+                Refresh
               </button>
-            </p>
-          )}
-        </section>
+            </div>
 
-        {user.role === "student" && (
+            <div className="stats-grid">
+              <div className={`panel stat-card ${statusFilter === "" ? "active-stat" : ""}`} onClick={() => setStatusFilter("")}>
+                <small>Total</small>
+                <strong>{dashboardStats.total}</strong>
+              </div>
+              <div
+                className={`panel stat-card ${statusFilter === "submitted" ? "active-stat" : ""}`}
+                onClick={() => setStatusFilter("submitted")}
+              >
+                <small>Submitted</small>
+                <strong>{dashboardStats.submitted}</strong>
+              </div>
+              <div
+                className={`panel stat-card ${statusFilter === "committee_review" ? "active-stat" : ""}`}
+                onClick={() => setStatusFilter("committee_review")}
+              >
+                <small>Review</small>
+                <strong>{dashboardStats.committee_review}</strong>
+              </div>
+              <div
+                className={`panel stat-card ${statusFilter === "in_progress" ? "active-stat" : ""}`}
+                onClick={() => setStatusFilter("in_progress")}
+              >
+                <small>In Progress</small>
+                <strong>{dashboardStats.in_progress}</strong>
+              </div>
+              <div
+                className={`panel stat-card ${statusFilter === "resolved" ? "active-stat" : ""}`}
+                onClick={() => setStatusFilter("resolved")}
+              >
+                <small>Resolved</small>
+                <strong>{dashboardStats.resolved}</strong>
+              </div>
+              <div
+                className={`panel stat-card ${statusFilter === "rejected" ? "active-stat" : ""}`}
+                onClick={() => setStatusFilter("rejected")}
+              >
+                <small>Rejected</small>
+                <strong>{dashboardStats.rejected}</strong>
+              </div>
+              <div
+                className={`panel stat-card ${statusFilter === "dismissed" ? "active-stat" : ""}`}
+                onClick={() => setStatusFilter("dismissed")}
+              >
+                <small>Dismissed</small>
+                <strong>{dashboardStats.dismissed}</strong>
+              </div>
+            </div>
+
+            {statusFilter && (
+              <p className="meta">
+                Active filter: <strong>{statusFilter}</strong>{" "}
+                <button className="ghost" onClick={() => setStatusFilter("")}>
+                  Clear
+                </button>
+              </p>
+            )}
+          </section>
+        )}
+
+        {showProfile && <ProfilePanel onBack={() => setShowProfile(false)} />}
+
+        {!showProfile && user.role === "student" && (
           <div className="tabs">
             <button className={studentTab === "all" ? "active" : "ghost"} onClick={() => setStudentTab("all")}>
               All Grievances
@@ -200,7 +206,7 @@ const Dashboard = () => {
           </div>
         )}
 
-        {user.role === "staff" && (
+        {!showProfile && user.role === "staff" && (
           <div className="tabs">
             <button className={staffTab === "all" ? "active" : "ghost"} onClick={() => setStaffTab("all")}>
               All Grievances
@@ -217,9 +223,11 @@ const Dashboard = () => {
           </div>
         )}
 
-        {user.role === "student" && studentTab === "new" && <GrievanceForm departments={departments} onCreated={load} />}
+        {!showProfile && user.role === "student" && studentTab === "new" && (
+          <GrievanceForm departments={departments} onCreated={load} />
+        )}
 
-        {user.role === "admin" && (
+        {!showProfile && user.role === "admin" && (
           <div className="tabs">
             <button
               className={adminTab === "grievances" ? "active" : "ghost"}
@@ -236,14 +244,17 @@ const Dashboard = () => {
           </div>
         )}
 
-        {user.role === "admin" && adminTab === "users" && (
+        {!showProfile && user.role === "admin" && adminTab === "users" && (
           <section className="admin-tools">
             <AdminUserForm departments={departments} />
             <AdminCollegeIdBulkForm />
           </section>
         )}
 
-        {(user.role !== "admin" || adminTab === "grievances") && user.role !== "student" && user.role !== "staff" && (
+        {!showProfile &&
+          (user.role !== "admin" || adminTab === "grievances") &&
+          user.role !== "student" &&
+          user.role !== "staff" && (
           <section className="list">
             <div className="row-between">
               <h2>Grievances</h2>
@@ -268,7 +279,7 @@ const Dashboard = () => {
           </section>
         )}
 
-        {user.role === "staff" && staffTab === "department" && (
+        {!showProfile && user.role === "staff" && staffTab === "department" && (
           <section className="list">
             <div className="row-between">
               <h2>Department Grievances</h2>
@@ -292,7 +303,7 @@ const Dashboard = () => {
           </section>
         )}
 
-        {user.role === "staff" && staffTab === "all" && (
+        {!showProfile && user.role === "staff" && staffTab === "all" && (
           <section className="list">
             <div className="row-between">
               <h2>All Grievances</h2>
@@ -316,7 +327,7 @@ const Dashboard = () => {
           </section>
         )}
 
-        {user.role === "staff" && staffTab === "studentIds" && (
+        {!showProfile && user.role === "staff" && staffTab === "studentIds" && (
           <section className="admin-tools">
             <AdminCollegeIdBulkForm
               endpoint="/auth/staff/student-college-ids/bulk"
@@ -330,7 +341,7 @@ const Dashboard = () => {
           </section>
         )}
 
-        {user.role === "student" && studentTab === "previous" && (
+        {!showProfile && user.role === "student" && studentTab === "previous" && (
           <section className="list">
             <div className="row-between">
               <h2>Your Previous Grievances</h2>
@@ -354,7 +365,7 @@ const Dashboard = () => {
           </section>
         )}
 
-        {user.role === "student" && studentTab === "all" && (
+        {!showProfile && user.role === "student" && studentTab === "all" && (
           <section className="list">
             <div className="row-between">
               <h2>All Grievances</h2>

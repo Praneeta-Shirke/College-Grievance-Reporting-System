@@ -5,6 +5,8 @@ import User from "../models/User.js";
 import Department from "../models/Department.js";
 import CollegeIdentity from "../models/CollegeIdentity.js";
 import PendingRegistration from "../models/PendingRegistration.js";
+import Grievance from "../models/Grievance.js";
+import StatusUpdate from "../models/StatusUpdate.js";
 import { sendRegistrationOtpEmail } from "../utils/mailer.js";
 
 const createToken = (id) => jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "7d" });
@@ -239,6 +241,136 @@ export const login = async (req, res) => {
 
 export const me = async (req, res) => {
   return res.json(toUserPayload(req.user));
+};
+
+export const updateMyProfile = async (req, res) => {
+  try {
+    const allowed = ["name", "phone", "currentAddress", "birthDate", "className", "batch"];
+    const updates = {};
+
+    for (const key of allowed) {
+      if (req.body[key] !== undefined) updates[key] = req.body[key];
+    }
+
+    if (updates.phone !== undefined && !/^\d{10}$/.test(String(updates.phone))) {
+      return res.status(400).json({ message: "Phone number must be 10 digits" });
+    }
+
+    if (updates.birthDate !== undefined) {
+      const parsed = new Date(updates.birthDate);
+      if (Number.isNaN(parsed.getTime())) return res.status(400).json({ message: "Invalid birthDate" });
+      updates.birthDate = parsed;
+    }
+
+    if (req.user.role === "student") {
+      if (updates.className !== undefined && !allowedStudentClasses.includes(updates.className)) {
+        return res.status(400).json({ message: "Invalid class selection" });
+      }
+      if (updates.batch !== undefined && !/^\d{4}$/.test(String(updates.batch))) {
+        return res.status(400).json({ message: "Batch must be a single year in YYYY format (e.g., 2026)" });
+      }
+    } else {
+      delete updates.className;
+      delete updates.batch;
+    }
+
+    const updated = await User.findByIdAndUpdate(req.user._id, { $set: updates }, { new: true }).populate(
+      "department",
+      "name code"
+    );
+    return res.json(toUserPayload(updated));
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to update profile", error: error.message });
+  }
+};
+
+export const deleteMyAccount = async (req, res) => {
+  try {
+    const currentPassword = req.body?.currentPassword || req.query?.currentPassword || "";
+    if (!currentPassword) return res.status(400).json({ message: "currentPassword is required" });
+
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const ok = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!ok) return res.status(401).json({ message: "Invalid password" });
+
+    if (user.role === "staff") {
+      const assignedCount = await Grievance.countDocuments({ assignedStaff: user._id });
+      if (assignedCount > 0) {
+        const replacement = await User.findOne({
+          role: "staff",
+          department: user.department,
+          _id: { $ne: user._id }
+        });
+        if (!replacement) {
+          return res.status(400).json({
+            message:
+              "Cannot delete account: staff is assigned to grievances and no replacement staff exists in the department"
+          });
+        }
+        await Grievance.updateMany({ assignedStaff: user._id }, { $set: { assignedStaff: replacement._id } });
+      }
+      await Department.updateMany({ staffMembers: user._id }, { $pull: { staffMembers: user._id } });
+    }
+
+    const createdGrievances = await Grievance.find({ createdBy: user._id }).select("_id").lean();
+    const createdGrievanceIds = createdGrievances.map((g) => g._id);
+    if (createdGrievanceIds.length) {
+      await StatusUpdate.deleteMany({ grievance: { $in: createdGrievanceIds } });
+      await Grievance.deleteMany({ _id: { $in: createdGrievanceIds } });
+    }
+
+    await StatusUpdate.deleteMany({ updatedBy: user._id });
+
+    await Grievance.updateMany(
+      { "adminApproval.approvedBy": user._id },
+      {
+        $set: {
+          "adminApproval.approvedBy": null,
+          "adminApproval.remarks": "Approver account deleted"
+        }
+      }
+    );
+    await Grievance.updateMany(
+      { "urgencyValidation.validatedBy": user._id },
+      {
+        $set: {
+          "urgencyValidation.validatedBy": null,
+          "urgencyValidation.remarks": "Validator account deleted"
+        }
+      }
+    );
+    await Grievance.updateMany(
+      { "dismissalRequest.requestedBy": user._id },
+      {
+        $set: {
+          "dismissalRequest.requestedBy": null
+        }
+      }
+    );
+    await Grievance.updateMany(
+      { "dismissalRequest.reviewedBy": user._id },
+      {
+        $set: {
+          "dismissalRequest.reviewedBy": null
+        }
+      }
+    );
+
+    await PendingRegistration.deleteOne({ email: user.email });
+    await CollegeIdentity.findOneAndUpdate(
+      { collegeId: user.collegeId, role: user.role },
+      { $set: { isClaimed: false, claimedBy: null, claimedAt: null } }
+    );
+
+    await User.findByIdAndDelete(user._id);
+
+    return res.json({ message: "Account deleted successfully" });
+  } catch (error) {
+    console.error("deleteMyAccount error:", error);
+    return res.status(500).json({ message: "Failed to delete account", error: error.message });
+  }
 };
 
 export const createUserByAdmin = async (req, res) => {
